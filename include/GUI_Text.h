@@ -5,73 +5,102 @@
 #include <iostream>
 #include <GUI_Colors.h>
 
-struct GUI_Text {
-    std::string value;
-    bool isHovered = false;
 
-    SDL_Color color;
-    SDL_Color hoverColor;
-    
+struct GUI_TextStyle{
+    SDL_Color color = WHITE;
+    SDL_Color hoverColor = AQUA;
+};
+
+GUI_TextStyle GUI_TextDefaultStyle;
+
+
+struct GUI_Text {
+    // What is the text
+    std::string value;
+    // Is text hovered
+    bool isHovered;
+    // Holds x,y,w,h info
     SDL_Rect rect;
+
+    // Style
+    GUI_TextStyle* style;
+
+    // SDL
     TTF_Font* font;
+    SDL_Renderer* renderer;
     SDL_Texture* texture;
     SDL_Surface *surface;
-    SDL_Renderer* renderer;
-    
-    inline static TTF_Font* FONT;
-    inline static SDL_Renderer* RENDERER;
+
 
     GUI_Text(){}
-    
-    GUI_Text(std::string value_,
-    int x = 0, int y = 0,
-    TTF_Font* font_ = nullptr,
-    SDL_Renderer* renderer_ = nullptr,
-    bool renderOnConstructor = 1,
-    SDL_Color color_ = WHITE, SDL_Color hoverColor_ = AQUA
-    ) : 
-    color(color_), hoverColor(hoverColor_), surface(nullptr), texture(nullptr)
+    GUI_Text(
+        std::string value_,
+        int x, int y,
+        TTF_Font* font_,
+        SDL_Renderer* renderer_,
+        bool addDefaultStyle=false,
+        bool renderForFirstTime=true
+        ) :
+        value(value_), font(font_), renderer(renderer_),
+        surface(nullptr), texture(nullptr), isHovered(false), style(nullptr)
     {
-        // Set renderer
-        if (renderer_ == nullptr) { renderer = RENDERER; }
-        else { renderer = renderer_ ; }
+        SetLocation(x, y);
+        if (addDefaultStyle)
+        {
+            SetStyle();
+        }
+    }
 
-        // Set font
-        if (font_ == nullptr) { font = FONT; }
-        else { font = font_; }
+    // Style must be set for rendering
+    // If you didn't set addDefaultStyle to true in constructor, you have to call this function manually
+    void SetStyle(GUI_TextStyle* newStyle=&GUI_TextDefaultStyle, bool renderWithNewStyle=true)
+    {
+        style = newStyle;
+        UpdateTextureAndSurface();
+        if (renderWithNewStyle)
+        {
+            Render();
+        }
+    }
 
-        // Setup
-        UpdatePosition(x, y);
-        UpdateValue(value_, renderOnConstructor);
+    void SetLocation(int x, int y)
+    {
+        rect.x = x;
+        rect.y = y;
     }
 
     void UpdateTextureAndSurface()
     {
         // Free the old ones
-        SDL_FreeSurface(surface);
-        SDL_DestroyTexture(texture);
+        FreeMemory();
 
-        // Update surface
-        surface = TTF_RenderText_Blended(font, value.c_str(), isHovered ? hoverColor : color);
-        // Update texture
+        // Update surface and texture
+        surface = TTF_RenderText_Blended(font, value.c_str(), isHovered ? style->hoverColor : style->color);
         texture = SDL_CreateTextureFromSurface(renderer, surface);
-    }
-
-    void UpdateRectData()
-    {
-        // Update rect
+        
+        // Update rect w and h
         rect.w = surface->w;
         rect.h = surface->h;
     }
 
+    // Renders the text onto the screen
+    void Render()
+    {
+        SDL_RenderCopy(renderer, texture, NULL, &rect);
+        SDL_RenderPresent(renderer);
+    }
 
+    // Updates is hovered state according to mouse postition
+    // Called when SDL_MOUSEMOTION is triggered
     void UpdateIsHoveredState()
     {
+        // Get pos
         int mouseX, mouseY;
         SDL_GetMouseState(&mouseX, &mouseY);
         
         bool oldState = isHovered;
 
+        // Update
         if (
             mouseX > rect.x && mouseX < ( rect.x + rect.w )
             &&
@@ -85,6 +114,7 @@ struct GUI_Text {
             isHovered = false;
         }
 
+        // If state has changed, render again to display color change
         if (oldState != isHovered)
         {
             UpdateTextureAndSurface();
@@ -93,52 +123,17 @@ struct GUI_Text {
     }
 
 
-    // Renders the text onto the screen
-    void Render()
+    // Free memory that text uses
+    void FreeMemory()
     {
-        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b,color.a);
-        SDL_RenderCopy(renderer, texture, NULL, &rect);
-        SDL_RenderPresent(renderer);
+        SDL_FreeSurface(surface); surface = nullptr;
+        SDL_DestroyTexture(texture); texture = nullptr;
     }
 
-    // Frees values created for object
-    void Free()
+
+    ~GUI_Text()
     {
-        SDL_FreeSurface(surface);
-        SDL_DestroyTexture(texture);
+        FreeMemory();
     }
 
-    // --- Settings ---
-    
-    // Updates value and texture, rect data according to new value.
-    // Renders the text again with new values if renderAfterUpdate is true
-
-    void UpdateValue(std::string newValue, bool renderAfterUpdate=true)
-    {
-        value = newValue;
-        UpdateTextureAndSurface();
-        UpdateRectData();
-        if (renderAfterUpdate)
-        {
-            Render();
-        }
-    }
-
-    void UpdateColor(SDL_Color newColor, bool renderAfterUpdateIfUnhovered=true)
-    {
-        color = newColor;
-        if (renderAfterUpdateIfUnhovered && !isHovered) { UpdateTextureAndSurface(); Render(); }
-    }
-
-    void UpdateHoverColor(SDL_Color newHoverColor, bool renderAfterUpdateIfHovered=true)
-    {
-        hoverColor = newHoverColor;
-        if (renderAfterUpdateIfHovered && isHovered) { UpdateTextureAndSurface(); Render(); }
-    }
-
-    void UpdatePosition(int xNew, int yNew)
-    {
-        rect.x = xNew;
-        rect.y = yNew;
-    }
 };
