@@ -82,13 +82,16 @@ struct GUI_Grid : public GUI_WidgetBase
         ApplyForEveryWidget( [](GUI_WidgetBase* widget)  { widget->MouseMotion(); } );
     }
 
-    void UpdateWidgetLocations()
+    void UpdateWidgetLocationsAndRectData()
     {
         int y = rect.y;
+        std::vector<int> rowWidths;
         for(int row = 0; row < rows.size(); row++)
         {
             std::vector<GUI_WidgetBase*>* rowToRender = rows[row];
             int x = rect.x;
+
+            int rowWidth = 0;
 
             GUI_WidgetBase* widgetWithMaxHeight = nullptr;
             for(int col = 0; col < rowToRender->size(); col++)
@@ -99,11 +102,11 @@ struct GUI_Grid : public GUI_WidgetBase
                 x += X_SPACE + widget->rect.w;
                 if (col != rowToRender->size() - 1)
                 {
-                    rect.w += X_SPACE + widget->rect.w;
+                    rowWidth += widget->rect.w + X_SPACE;
                 }
                 else
                 {
-                    rect.w += widget->rect.w;
+                    rowWidth += widget->rect.w;
                 }
                 
                 if (widget->rect.h > ( widgetWithMaxHeight == nullptr ? 0 : widgetWithMaxHeight->rect.h) )
@@ -111,6 +114,8 @@ struct GUI_Grid : public GUI_WidgetBase
                     widgetWithMaxHeight = widget;
                 }
             }
+
+            rowWidths.push_back(rowWidth);
 
             if (row != rows.size() - 1)
             {
@@ -122,11 +127,21 @@ struct GUI_Grid : public GUI_WidgetBase
                 rect.h += widgetWithMaxHeight->rect.h;
             }
         }
+        int maxRowWidth = 0;
+
+        for (int i=0; i < rowWidths.size(); i++)
+        {
+            if (rowWidths[i] > maxRowWidth)
+            {
+                maxRowWidth = rowWidths[i];
+            }
+        }
+        rect.w = maxRowWidth;
     }
 
     void Render()
     {
-        UpdateWidgetLocations();
+        UpdateWidgetLocationsAndRectData();
         ApplyForEveryWidget( [](GUI_WidgetBase* widget)  { widget->Render(); } );
     }
 };
