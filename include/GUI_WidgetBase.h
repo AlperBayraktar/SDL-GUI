@@ -2,16 +2,23 @@
 
 #include <SDL.h>
 
+#include <GUI_Colors.h>
+
 struct GUI_WidgetBase {
-    const char* a = "alper";
+    inline static TTF_Font* FONT = nullptr;
+    inline static SDL_Renderer* RENDERER = nullptr;
+    inline static SDL_Color CLEAR_COLOR = BLACK;
+
     // Holds x,y,w,h info
     SDL_Rect rect;
 
     // Called when SDL_MOUSEMOTION is triggered
-    virtual void MouseMotion();
-    virtual void Render();
+    virtual void MouseMotion() {};
+    // Draws the widget
+    virtual void Render() {};
     
-    void SetLocation(int x, int y)
+    // Sets x and y location
+    virtual void SetLocation(int x, int y)
     {
         rect.x = x;
         rect.y = y;

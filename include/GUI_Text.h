@@ -6,41 +6,45 @@
 
 #include <GUI_Colors.h>
 #include <GUI_WidgetBase.h>
-
+#include <GUI_Utilities.h>
 
 struct GUI_Text : public GUI_WidgetBase {
-    // What is the text
+    // The text that will be displayed
     std::string value;
     // Is text hovered
     bool isHovered;
 
     // SDL
-    TTF_Font* font;
-    SDL_Renderer* renderer;
     SDL_Texture* texture;
     SDL_Surface *surface;
+    TTF_Font* font;
 
 
     GUI_Text() : GUI_WidgetBase() {}
     GUI_Text(
         std::string value_,
-        int x, int y,
-        TTF_Font* font_,
-        SDL_Renderer* renderer_,
-        bool renderForFirstTime=true
+        int x=0, int y=0,
+        // Do render in constructor
+        bool renderForFirstTime=false
         ) :
         GUI_WidgetBase(),
-        value(value_), font(font_), renderer(renderer_),
-        surface(nullptr), texture(nullptr), isHovered(false)
+        value(value_),
+        surface(nullptr), texture(nullptr), font(nullptr), isHovered(false)
     {
+        rect.w = 0;
+        rect.h = 0;
+        font = FONT;
         SetLocation(x, y);
         UpdateTextureAndSurface();
+        UpdateRect();
         if (renderForFirstTime)
         {
             Render();
         }
     }
 
+    // Updates texture and surface.
+    // Called to display changes when value and color gets updated
     void UpdateTextureAndSurface()
     {
         // Free the old ones
@@ -48,47 +52,33 @@ struct GUI_Text : public GUI_WidgetBase {
 
         // Update surface and texture
         surface = TTF_RenderText_Blended(font, value.c_str(), isHovered ? AQUA : WHITE);
-        texture = SDL_CreateTextureFromSurface(renderer, surface);
-        
-        // Update rect w and h
+        texture = SDL_CreateTextureFromSurface(RENDERER, surface);
+    }
+
+    // Update rect w and h
+    void UpdateRect()
+    {
         rect.w = surface->w;
         rect.h = surface->h;
     }
 
-    // Renders the text onto the screen
+    // Renders the text onto the screen (without clearing the old render if old render exists)
     void Render()
     {
-        SDL_RenderCopy(renderer, texture, NULL, &rect);
-        SDL_RenderPresent(renderer);
+        SDL_RenderCopy(RENDERER, texture, NULL, &rect);
+        SDL_RenderPresent(RENDERER);
     }
 
     // Updates is hovered state according to mouse postition
     // Called when SDL_MOUSEMOTION is triggered
     void MouseMotion()
     {
-        // Get pos
-        int mouseX, mouseY;
-        SDL_GetMouseState(&mouseX, &mouseY);
-        
         bool oldState = isHovered;
+        isHovered = IsMouseOnRect(rect);
 
-        // Update
-        if (
-            mouseX > rect.x && mouseX < ( rect.x + rect.w )
-            &&
-            mouseY > rect.y && mouseY < ( rect.y + rect.h )
-        )
-        {
-            isHovered = true;
-        }
-        else
-        {
-            isHovered = false;
-        }
-
-        // If state has changed, render again to display color change
         if (oldState != isHovered)
         {
+            ClearWidgetRender(this, CLEAR_COLOR, RENDERER);
             UpdateTextureAndSurface();
             Render();
         }
@@ -98,6 +88,7 @@ struct GUI_Text : public GUI_WidgetBase {
     {
         value = newValue;
         UpdateTextureAndSurface();
+        UpdateRect();
         
         if (renderAfterUpdate)
         {
@@ -118,5 +109,4 @@ struct GUI_Text : public GUI_WidgetBase {
     {
         FreeMemory();
     }
-
 };
