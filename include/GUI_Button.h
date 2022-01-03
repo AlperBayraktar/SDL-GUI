@@ -11,6 +11,9 @@ struct GUI_Button : public GUI_WidgetBase
     const static int DEFAULT_X_SPACING = 20;
     const static int DEFAULT_Y_SPACING = 15;
     
+    // The function that will be called when button is clicked
+    void (*clickEvent)(GUI_Button*);
+
     GUI_Text* text = nullptr;
     bool isHovered = false;
 
@@ -76,10 +79,26 @@ struct GUI_Button : public GUI_WidgetBase
         }
     }
 
+    // Called when left mouse button is triggered
+    // If mouse is hovered, calls clickEvent
+    void Click()
+    {
+        if (isHovered)
+        {
+            clickEvent(this);
+        }
+    }
+
     void SetLocation(int x, int y)
     {
         text->rect.x = x + X_SPACING;
         text->rect.y = y + Y_SPACING;
         UpdateRectData();
+    }
+
+    // Bind click event
+    void BindClickEvent(void (*newEvent)(GUI_Button*))
+    {
+        clickEvent = newEvent;
     }
 };
